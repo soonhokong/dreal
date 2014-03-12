@@ -213,17 +213,23 @@ rp_problem* icp_solver::create_rp_problem() {
 void icp_solver::callODESolver(ode_solver * odeSolver, bool forward, ode_solver::ODE_result & result) {
     // Simple ODE
     result = odeSolver->simple_ODE(m_boxes.get(), forward);
+    std::cerr << "RET: Simple ODE = " << result << std::endl;
 
     if (result == ode_solver::ODE_result::UNSAT)
         return;
+    std::cerr << "simple ODE pass" << std::endl;
     if (!m_propag->apply(m_boxes.get())) {
+        std::cerr << "RET: After Propagation = " << result << std::endl;
         result = ode_solver::ODE_result::UNSAT;
         return;
     }
+    std::cerr << "propagation pass " << forward << std::endl;
 
     if (forward) {
         // First Try (Forward).
+        std::cerr << "RET: before solve_forward = " << std::endl;
         result = odeSolver->solve_forward(m_boxes.get());
+        std::cerr << "RET: solve_forward = " << result << std::endl;
         if (result == ode_solver::ODE_result::UNSAT)
             return;
         if (!m_propag->apply(m_boxes.get())) {
@@ -232,6 +238,7 @@ void icp_solver::callODESolver(ode_solver * odeSolver, bool forward, ode_solver:
         }
         // Second Try (Backward).
         result = odeSolver->solve_backward(m_boxes.get());
+        std::cerr << "RET: solve_backward = " << result << std::endl;
         if (result == ode_solver::ODE_result::UNSAT)
             return;
         if (!m_propag->apply(m_boxes.get())) {
@@ -241,6 +248,7 @@ void icp_solver::callODESolver(ode_solver * odeSolver, bool forward, ode_solver:
     } else {
         // First Try (Backward).
         result = odeSolver->solve_backward(m_boxes.get());
+        std::cerr << "RET: solve_backward = " << result << std::endl;
         if (result == ode_solver::ODE_result::UNSAT)
             return;
         if (!m_propag->apply(m_boxes.get())) {
@@ -249,6 +257,7 @@ void icp_solver::callODESolver(ode_solver * odeSolver, bool forward, ode_solver:
         }
         // Second Try (Forward).
         result = odeSolver->solve_forward(m_boxes.get());
+        std::cerr << "RET: solve_forward = " << result << std::endl;
         if (result == ode_solver::ODE_result::UNSAT)
             return;
         if (!m_propag->apply(m_boxes.get())) {
@@ -265,6 +274,7 @@ void print_interval(ostream & out, double lb, double ub) {
 }
 
 bool icp_solver::prop_with_ODE() {
+    static unsigned counter = 0;
     if (m_propag->apply(m_boxes.get())) {
 #ifdef ODE_ENABLED
         if (m_config.nra_contain_ODE) {
@@ -282,10 +292,17 @@ bool icp_solver::prop_with_ODE() {
                 double const lv_xt = odeSolver->logVolume_Xt(b);
                 unsigned const mode = odeSolver->get_Mode();
                 bool forward = m_config.nra_ODE_forward_only ? true : lv_x0 <= lv_xt;
-                DREAL_LOG_DEBUG(setw(10) << mode << setw(20) << lv_x0 << setw(20) << lv_xt
-                                << setw(20) << (forward ? "Forward" : "Backward"));
+                DREAL_LOG_INFO(setw(10) << mode << setw(20) << lv_x0 << setw(20) << lv_xt
+                               << setw(20) << (forward ? "Forward" : "Backward")
+                               << setw(20) << counter++);
                 ode_solver::ODE_result result = ode_solver::ODE_result::SAT;
-                callODESolver(odeSolver, forward, result);
+                std::cerr << "Before callODESolver" << std::endl;
+                try {
+                    callODESolver(odeSolver, forward, result);
+                } catch (exception & e) {
+                    std::cerr << "Exception in callODESolver : " << e.what() << std::endl;
+                }
+                std::cerr << "After  callODESolver\t" << result << std::endl;
                 if (result == ode_solver::ODE_result::UNSAT) {
                     return false;
                 }

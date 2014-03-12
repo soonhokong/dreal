@@ -41,7 +41,7 @@ public:
                std::unordered_map<Enode*, int>& enode_to_rp_id);
     ~ode_solver();
 
-    enum class ODE_result {SAT, UNSAT, EXCEPTION, TIMEOUT};
+    enum class ODE_result {SAT, UNSAT, EXCEPTION, TIMEOUT, INV_VIOLATED};
 
     ODE_result          simple_ODE(rp_box b, bool forward);
     ODE_result          solve_forward(rp_box b);
@@ -55,6 +55,8 @@ private:
     std::vector<Enode*> get_X0() const { return m_0_vars; }
     std::vector<Enode*> get_Xt() const { return m_t_vars; }
     Enode *             get_Time() const { return m_time; }
+    std::vector<double> extract_X0(rp_box b) const;
+    std::vector<double> extract_Xt(rp_box b) const;
     std::vector<double> extract_X0T(rp_box b) const;
     std::vector<double> extract_XtT(rp_box b) const;
     std::vector<double> extract_X0XtT(rp_box b) const;
@@ -104,7 +106,8 @@ private:
     template<typename V>
     bool union_and_join(vector<V> const & bucket, V & result);
     bool inner_loop_forward(capd::ITaylor & solver,
-                            capd::interval prevTime,
+                            capd::interval const & prevTime,
+                            capd::interval const & time,
                             std::vector<std::pair<capd::interval, capd::IVector>> & bucket);
     bool inner_loop_backward(capd::ITaylor & solver,
                             capd::interval prevTime,
@@ -120,8 +123,9 @@ private:
                                    capd::IVector const & inv,
                                    vector<capd::IFunction> & funcs);
     bool updateValue(rp_box b, Enode * e, double lb, double ub);
-    ODE_result compute_forward(std::vector<std::pair<capd::interval, capd::IVector>> & bucket);
-    ODE_result prune_forward(std::vector<std::pair<capd::interval, capd::IVector>> & bucket);
+    ODE_result compute_forward(rp_box b, capd::IVector const & X_0, capd::interval const & time, std::vector<std::pair<capd::interval, capd::IVector>> & bucket);
+    ODE_result compute_enclosure(capd::IVector const & X_0, capd::interval const & time, std::vector<std::pair<capd::interval, capd::IVector>> & bucket);
+    ODE_result prune_forward(std::vector<std::pair<capd::interval, capd::IVector>> & bucket, capd::IVector & X_t, capd::interval & time);
     ODE_result compute_backward(std::vector<std::pair<capd::interval, capd::IVector>> & bucket);
     ODE_result prune_backward(std::vector<std::pair<capd::interval, capd::IVector>> & bucket);
 

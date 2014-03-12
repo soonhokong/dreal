@@ -338,43 +338,299 @@ ode_solver::ODE_result ode_solver::simple_ODE(rp_box b, bool forward) {
     }
 }
 
+
+// Given cached items, only pick the ones within time.
+vector<pair<interval, IVector>> cache_filter(vector<pair<interval, IVector>> const & cached, interval const & time) {
+    vector<pair<interval, IVector>> ret;
+    copy_if(cached.begin(), cached.end(), back_inserter(ret),
+            [&time](pair<interval, IVector> const & item) {
+                //           |-------------------------------|
+                //  [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]
+                //
+                bool contained = (time.leftBound() <= item.first.rightBound()) &&
+                                 (item.first.leftBound() <= time.rightBound());
+                // std::cerr << "dt   : " << setw(20) << item.first << "\t"
+                //           << "time : " << setw(20) << time       << "\t"
+                //           << setw(10) << contained << std::endl;
+                return contained;
+            });
+    return ret;
+}
+
 ode_solver::ODE_result ode_solver::solve_forward(rp_box b) {
     DREAL_LOG_DEBUG("ODE_Solver::solve_forward()");
     ODE_result ret = ODE_result::SAT;
     update(b);
-
-    static map<vector<double>, tuple<ODE_result, vector<pair<interval, IVector>>>> cache;
     vector<pair<interval, IVector>> bucket;
+    ret = compute_forward(b, m_X_0, m_T, bucket);
+    switch (ret) {
+    case ODE_result::SAT:
+    case ODE_result::INV_VIOLATED:
+        ret = prune_forward(bucket, m_X_t, m_T);
+        if (ret == ODE_result::UNSAT) {
+            // UNSAT
+            for (auto _t_var : m_t_vars) {
+                set_empty_interval(_t_var);
+            }
+            set_empty_interval(m_time);
+        } else {
+            // SAT
+            IVector_to_varlist(m_X_t, m_t_vars);
+            set_lb(m_time, m_T.leftBound());
+            set_ub(m_time, m_T.rightBound());
+        }
+        std::cerr << "It was SAT, after Prune it becomes " << ret << std::endl;
+        return ret;
+    default:
+        return ret;
+    }
+}
 
+ode_solver::ODE_result ode_solver::compute_forward(rp_box b, IVector const & X_0, interval const & time, vector<pair<interval, IVector>> & bucket) {
+    ODE_result ret = ODE_result::SAT;
     if (m_config.nra_ODE_cache) {
         // Check Cache
-        vector<double> currentX0T = extract_X0T(b);
-        auto cache_it = cache.find(currentX0T);
+        static map<vector<double>, tuple<ODE_result, vector<pair<interval, IVector>>>> cache;
+        vector<double> currentX0 = extract_X0(b);
+        auto cache_it = cache.find(currentX0);
         if (cache_it != cache.end()) {
-            // HIT
+            // Case: Cache avaiable.
             g_hit++;
             ODE_result cached_ret = get<0>(cache_it->second);
-            if (cached_ret == ODE_result::UNSAT ||
-                cached_ret == ODE_result::EXCEPTION ||
-                cached_ret == ODE_result::TIMEOUT) {
+            switch (cached_ret) {
+            case ODE_result::UNSAT:
+            case ODE_result::EXCEPTION:
+            case ODE_result::TIMEOUT:
+                return cached_ret;
+            case ODE_result::INV_VIOLATED:
+                bucket = get<1>(cache_it->second);
+                return cached_ret;
+            case ODE_result::SAT:
+                // TODO(soonhok)
+                bucket = get<1>(cache_it->second);
+                assert(!bucket.empty());
+                interval const & firstTime = bucket.begin()->first;
+                interval const & lastTime = bucket.rbegin()->first;
+                // cerr << "Cached: " << firstTime << ", " << lastTime << endl;
+                assert(time.rightBound() <= lastTime.rightBound());
+                assert(firstTime.leftBound() <= time.leftBound());
                 return cached_ret;
             }
-            bucket = get<1>(cache_it->second);
         } else {
-            // NoHit
+            // Case: No cache avaiable.
             g_nohit++;
             // Compute
-            ret = compute_forward(bucket);
+            ret = compute_enclosure(X_0, time, bucket);
             // Save to cache
-            cache.emplace(currentX0T, make_tuple(ret, bucket));
+            interval const & firstTime = bucket.begin()->first;
+            interval const & lastTime = bucket.rbegin()->first;
+            cerr << "Time:   " << time << endl;
+            cerr << "Cached: " << firstTime << ", " << lastTime << endl;
+            cache.emplace(currentX0, make_tuple(ret, bucket));
         }
-    } else {
-        ret = compute_forward(bucket);
-    }
-    if (ret == ODE_result::SAT) {
-        return prune_forward(bucket);
-    } else {
+        cerr << "HIT : " << g_hit << "\t"
+             << "NOHIT : " << g_nohit << endl;
         return ret;
+    //         vector<pair<interval, IVector>> & cached = get<1>(cache_it->second);
+    //         interval const & lastTime = cached.rbegin()->first;
+    //         IVector const &  lastV    = cached.rbegin()->second;
+    //         if(lastTime.rightBound() < m_T.rightBound()) {
+    //             // The cache has incomplete information and we need to
+    //             // compute more.
+    //             g_nohit++;
+    //             // Compute
+    //             vector<pair<interval, IVector>> tmp_bucket;
+    //             interval tmp_time(0, m_T.rightBound() - lastTime.rightBound());
+    //             std::cerr << "m_T      = " << m_T      << std::endl;
+    //             std::cerr << "lastTime = " << lastTime << std::endl;
+    //             std::cerr << m_T.rightBound() << " - " << lastTime.rightBound() << " = TMP_TIME = " << tmp_time << std::endl;
+    //             ret = compute_forward(lastV, tmp_time, tmp_bucket);
+    //             std::cerr << "cache computation : " << ret << std::endl;
+    //             if(tmp_bucket.empty()) {
+    //                 std::cerr << "EMPTY!!" << std::endl;
+    //             } else {
+    //                 for(pair<interval, IVector> & item : tmp_bucket) {
+    //                     interval & time = item.first;
+    //                     IVector const & v    = item.second;
+    //                     std::cerr << "!" << setw(15) << time << "\t" << v << std::endl;
+    //                     time = time + interval(lastTime.rightBound(), lastTime.rightBound());
+    //                     std::cerr << " " << setw(15) << time << "\t" << v << std::endl;
+    //                 }
+    //                 copy(tmp_bucket.begin(), tmp_bucket.end(), back_inserter(cached));
+    //             }
+    //         } else {
+    //             // HIT: The cache contains more than enough
+    //             // information.
+    //             g_hit++;
+    //         }
+    //         bucket = cache_filter(cached, m_T);
+    //     }
+    } else {
+        // Use No ODE Cache
+        return compute_enclosure(X_0, time, bucket);
+    }
+}
+
+ode_solver::ODE_result ode_solver::compute_enclosure(IVector const & X_0, interval const & time, vector<pair<interval, IVector>> & bucket) {
+    ODE_result ret = ODE_result::SAT;
+    auto start = high_resolution_clock::now();
+    bool invariantViolated = false;
+    try {
+        // Set up VectorField
+        IMap vectorField(m_diff_sys_forward);
+        for (Enode * par : m_pars) {
+            double lb = get_lb(par);
+            double ub = get_ub(par);
+            string name = par->getCar()->getName();
+            vectorField.setParameter(name, interval(lb, ub));
+        }
+        ITaylor solver(vectorField, m_config.nra_ODE_taylor_order, .001);
+        ITimeMap timeMap(solver);
+        C0Rect2Set s(X_0);
+        timeMap.stopAfterStep(true);
+        timeMap.turnOnStepControl();
+        interval prevTime(0.);
+        do {
+            // Handle Timeout
+            if (m_config.nra_ODE_timeout > 0.0) {
+                auto end = high_resolution_clock::now();
+                if (duration_cast<milliseconds>(end - start).count() >= m_config.nra_ODE_timeout) {
+                    return ODE_result::TIMEOUT;
+                }
+            }
+            // Check Invariant
+            invariantViolated = !check_invariant(s, m_inv);
+            if (invariantViolated) {
+                return ODE_result::INV_VIOLATED;
+            }
+            // Control TimeStep
+            timeMap.turnOnStepControl();
+            if (m_stepControl > 0 && solver.getStep() < m_stepControl) {
+                timeMap.turnOffStepControl();
+                solver.setStep(m_stepControl);
+                timeMap.setStep(m_stepControl);
+            }
+            // Move s toward time.rightBound()
+            timeMap(time.rightBound(), s);
+            if (contain_NaN(s)) { return ODE_result::EXCEPTION; }
+            if (time.leftBound() <= timeMap.getCurrentTime().rightBound()) {
+                invariantViolated = inner_loop_forward(solver, prevTime, time, bucket);
+                if (invariantViolated) {
+                    return ODE_result::INV_VIOLATED;
+                }
+            } else {
+                interval const stepMade = solver.getStep();
+                const ITaylor::CurveType& curve = solver.getCurve();
+                interval domain = interval(0, 1) * stepMade;
+                list<interval> intvs;
+                intvs = split(domain, m_config.nra_ODE_grid_size);
+                for (interval subsetOfDomain : intvs) {
+                    interval dt = prevTime.rightBound() + subsetOfDomain;
+                    IVector v = curve(subsetOfDomain);
+                    // cerr << "dt : " << dt << "\t" << "v : " << v << endl;
+                    bucket.emplace_back(dt, v);
+                }
+            }
+            prevTime = timeMap.getCurrentTime();
+        } while (!invariantViolated && !timeMap.completed());
+    } catch (exception& e) {
+        ret = ODE_result::EXCEPTION;
+    }
+    return ret;
+}
+
+// Run inner loop
+// return true if it violates invariant otherwise return false.
+bool ode_solver::inner_loop_forward(ITaylor & solver, interval const & prevTime, interval const & time, vector<pair<interval, IVector>> & bucket) {
+    std::cerr << "inner_loop_forward" << std::endl;
+    std::cerr << "\t" << "prevTime = " << prevTime << std::endl;
+    std::cerr << "\t" << "time     = " << time     << std::endl;
+    interval const stepMade = solver.getStep();
+    const ITaylor::CurveType& curve = solver.getCurve();
+    interval domain = interval(0, 1) * stepMade;
+    std::cerr << "\t" << "domain     = " << domain     << std::endl;
+
+    list<interval> intvs;
+    //
+    //               |<--- stepMade --->|
+    //               [                  ]
+    //     [PrevTime ]    [           Time                   ]
+    //
+    //               [   ][ rest of dom ]
+    //               |<->|
+    //               pre_T
+    //
+    if (prevTime.rightBound() < time.leftBound()
+        && time.leftBound() <= prevTime.rightBound() + stepMade.rightBound()) {
+        interval pre_T = interval(0, time.leftBound() - prevTime.rightBound());
+        domain.setLeftBound(time.leftBound() - prevTime.rightBound());
+        intvs = split(domain, m_config.nra_ODE_grid_size);
+        intvs.push_front(pre_T);
+    } else {
+        intvs = split(domain, m_config.nra_ODE_grid_size);
+    }
+
+    for (interval subsetOfDomain : intvs) {
+        interval dt = prevTime.rightBound() + subsetOfDomain;
+        IVector v = curve(subsetOfDomain);
+        if (!check_invariant(v, m_inv)) {
+            return true;
+        }
+        // cerr << "dt                                     = " << dt << endl
+        //      << "prevTime                               = " << prevTime << endl
+        //      << "subsetOfDomain                         = " << subsetOfDomain << endl
+        //      << "prevTime + subsetOfDomain.rightBound() = " << prevTime + subsetOfDomain.rightBound() << endl
+        //      << "v                                      = " << v << endl;
+
+        // cerr << dt << "\t" << v << endl;
+        // if (time.leftBound() < dt.rightBound()) {
+            bucket.emplace_back(dt, v);
+        //     cerr << "In     : " << dt << "\t" << v << endl;
+        // } else if (time.leftBound() == dt.rightBound()) {
+        //     cerr << "!!!!!!!: " << dt << "\t" << v << endl;
+        // } else {
+        //     cerr << "Dropped: " << dt << "\t" << v << endl;
+        // }
+        // std::cerr << "LOOP: " << prevTime + subsetOfDomain << "\t" << v << std::endl;
+        // // TODO(soonhok): visualization
+        // if (m_config.nra_json) {
+        //     m_trajectory.emplace_back(prevTime + subsetOfDomain, v);
+        // }
+    }
+    return false;
+}
+
+ode_solver::ODE_result ode_solver::prune_forward(vector<pair<interval, IVector>> & bucket,
+                                                 IVector & X_t,
+                                                 interval & time) {
+    // 1) Intersect each v in bucket with X_t.
+    // 2) If there is no intersection in 1), set dt an empty interval [0, 0]
+    bucket.erase(remove_if (bucket.begin(), bucket.end(),
+                            [this, &time, &X_t](pair<interval, IVector> & item) {
+                                interval const & dt = item.first;
+                                if (dt.rightBound() <= time.leftBound())
+                                    return true;
+                                if (time.rightBound() <= dt.leftBound())
+                                    return true;
+                                IVector & v  = item.second;
+                                if (!intersection(v, X_t, v)) {
+                                    return true;
+                                }
+                                return false;
+                            }),
+                 bucket.end());
+    if (bucket.empty()) {
+        return ODE_result::UNSAT;
+    } else {
+        time = bucket.begin()->first;
+        X_t  = bucket.begin()->second;
+        for (pair<interval, IVector> & item : bucket) {
+            interval & dt = item.first;
+            IVector &  v  = item.second;
+            X_t  = intervalHull(X_t,  v);
+            time    = intervalHull(time, dt);
+        }
+        return ODE_result::SAT;
     }
 }
 
@@ -418,96 +674,7 @@ ode_solver::ODE_result ode_solver::solve_backward(rp_box b) {
     }
 }
 
-ode_solver::ODE_result ode_solver::compute_forward(vector<pair<interval, IVector>> & bucket) {
-    ODE_result ret = ODE_result::SAT;
-    auto start = high_resolution_clock::now();
-    bool invariantViolated = false;
 
-    try {
-        // Set up VectorField
-        IMap vectorField(m_diff_sys_forward);
-        for (Enode * par : m_pars) {
-            double lb = get_lb(par);
-            double ub = get_ub(par);
-            string name = par->getCar()->getName();
-            vectorField.setParameter(name, interval(lb, ub));
-        }
-        ITaylor solver(vectorField, m_config.nra_ODE_taylor_order, .001);
-        ITimeMap timeMap(solver);
-        C0Rect2Set s(m_X_0);
-        timeMap.stopAfterStep(true);
-        timeMap.turnOnStepControl();
-
-        // TODO(soonhok): visualization
-        if (m_config.nra_json) {
-            m_trajectory.clear();
-            m_trajectory.emplace_back(timeMap.getCurrentTime(), IVector(s));
-        }
-
-        interval prevTime(0.);
-        do {
-            // Handle Timeout
-            if (m_config.nra_ODE_timeout > 0.0) {
-                auto end = high_resolution_clock::now();
-                if (duration_cast<milliseconds>(end - start).count() >= m_config.nra_ODE_timeout) {
-                    return ODE_result::TIMEOUT;
-                }
-            }
-
-            // Check Invariant
-            invariantViolated = !check_invariant(s, m_inv);
-            if (invariantViolated) {
-                // TODO(soonhok): invariant
-                if (timeMap.getCurrentTime().rightBound() < m_T.leftBound()) {
-                    ret = ODE_result::UNSAT;
-                } else {
-                    ret = ODE_result::SAT;
-                }
-                break;
-            }
-
-            // Control TimeStep
-            timeMap.turnOnStepControl();
-            if (m_stepControl > 0 && solver.getStep() < m_stepControl) {
-                timeMap.turnOffStepControl();
-                solver.setStep(m_stepControl);
-                timeMap.setStep(m_stepControl);
-            }
-
-            // Move s toward m_T.rightBound()
-            timeMap(m_T.rightBound(), s);
-            if (contain_NaN(s)) { return ODE_result::SAT; }
-            if (m_T.leftBound() <= timeMap.getCurrentTime().rightBound()) {
-                invariantViolated = inner_loop_forward(solver, prevTime, bucket);
-                if (invariantViolated) {
-                    // TODO(soonhok): invariant
-                    ret = ODE_result::SAT;
-                    break;
-                }
-            } else {
-                if (m_config.nra_json) {
-                    interval const stepMade = solver.getStep();
-                    const ITaylor::CurveType& curve = solver.getCurve();
-                    interval domain = interval(0, 1) * stepMade;
-                    list<interval> intvs;
-                    intvs = split(domain, m_config.nra_ODE_grid_size);
-                    for (interval subsetOfDomain : intvs) {
-                        interval dt = prevTime + subsetOfDomain;
-                        IVector v = curve(subsetOfDomain);
-                        m_trajectory.emplace_back(dt, v);
-                    }
-                }
-            }
-            prevTime = timeMap.getCurrentTime();
-        } while (!invariantViolated && !timeMap.completed());
-    } catch (exception& e) {
-        ret = ODE_result::EXCEPTION;
-    }
-    if (m_config.nra_json) {
-        prune_trajectory(m_T, m_X_t);
-    }
-    return ret;
-}
 
 ode_solver::ODE_result ode_solver::compute_backward(vector<pair<interval, IVector>> & bucket) {
     ODE_result ret = ODE_result::SAT;
@@ -585,47 +752,6 @@ ode_solver::ODE_result ode_solver::compute_backward(vector<pair<interval, IVecto
         prune_trajectory(m_T, m_X_0);
     }
     return ret;
-}
-
-ode_solver::ODE_result ode_solver::prune_forward(vector<pair<interval, IVector>> & bucket) {
-    // 1) Intersect each v in bucket with X_t.
-    // 2) If there is no intersection in 1), set dt an empty interval [0, 0]
-    for (pair<interval, IVector> & item : bucket) {
-        interval & dt = item.first;
-        IVector &  v  = item.second;
-        // v = v union m_X_t
-        if (!intersection(v, m_X_t, v)) {
-            dt.setLeftBound(0.0);
-            dt.setRightBound(0.0);
-        }
-    }
-    bucket.erase(remove_if (bucket.begin(), bucket.end(),
-                           [](pair<interval, IVector> const & item) {
-                               interval const & dt = item.first;
-                               return dt.leftBound() == 0.0 && dt.rightBound() == 0.0;
-                           }),
-                 bucket.end());
-    if (bucket.empty()) {
-        // UNSAT
-        for (auto _t_var : m_t_vars) {
-            set_empty_interval(_t_var);
-        }
-        set_empty_interval(m_time);
-        return ODE_result::UNSAT;
-    } else {
-        m_T = bucket.begin()->first;
-        m_X_t  = bucket.begin()->second;
-        for (pair<interval, IVector> & item : bucket) {
-            interval & dt = item.first;
-            IVector &  v  = item.second;
-            m_X_t  = intervalHull(m_X_t,  v);
-            m_T    = intervalHull(m_T, dt);
-        }
-        IVector_to_varlist(m_X_t, m_t_vars);
-        set_lb(m_time, m_T.leftBound());
-        set_ub(m_time, m_T.rightBound());
-        return ODE_result::SAT;
-    }
 }
 
 ode_solver::ODE_result ode_solver::prune_backward(vector<pair<interval, IVector>> & bucket) {
@@ -754,41 +880,6 @@ bool ode_solver::union_and_join(vector<V> const & bucket, V & result) {
     return true;
 }
 
-// Run inner loop
-// return true if it violates invariant otherwise return false.
-bool ode_solver::inner_loop_forward(ITaylor & solver, interval prevTime, vector<pair<interval, IVector>> & bucket) {
-    interval const stepMade = solver.getStep();
-    const ITaylor::CurveType& curve = solver.getCurve();
-    interval domain = interval(0, 1) * stepMade;
-    list<interval> intvs;
-    if (prevTime.rightBound() < m_T.leftBound()) {
-        interval pre_T = interval(0, m_T.leftBound() - prevTime.rightBound());
-        domain.setLeftBound(m_T.leftBound() - prevTime.rightBound());
-        intvs = split(domain, m_config.nra_ODE_grid_size);
-        intvs.push_front(pre_T);
-    } else {
-        intvs = split(domain, m_config.nra_ODE_grid_size);
-    }
-
-    for (interval subsetOfDomain : intvs) {
-        interval dt = prevTime + subsetOfDomain;
-        IVector v = curve(subsetOfDomain);
-        if (!check_invariant(v, m_inv)) {
-            // TODO(soonhok): invariant
-            return true;
-        }
-        // cerr << dt << "\t" << v << endl;
-        if (prevTime + subsetOfDomain.rightBound() > m_T.leftBound()) {
-            bucket.emplace_back(dt, v);
-        }
-        // TODO(soonhok): visualization
-        if (m_config.nra_json) {
-            m_trajectory.emplace_back(prevTime + subsetOfDomain, v);
-        }
-    }
-    return false;
-}
-
 bool ode_solver::inner_loop_backward(ITaylor & solver, interval prevTime, vector<pair<interval, IVector>> & bucket) {
     interval const stepMade = solver.getStep();
     const ITaylor::CurveType& curve = solver.getCurve();
@@ -804,13 +895,13 @@ bool ode_solver::inner_loop_backward(ITaylor & solver, interval prevTime, vector
     }
 
     for (interval subsetOfDomain : intvs) {
-        interval dt = prevTime + subsetOfDomain;
+        interval dt = prevTime.rightBound() + subsetOfDomain;
         IVector v = curve(subsetOfDomain);
         if (!check_invariant(v, m_inv)) {
             // TODO(soonhok): invariant
             return true;
         }
-        if (prevTime + subsetOfDomain.rightBound() > m_T.leftBound()) {
+        if (dt.rightBound() > m_T.leftBound()) {
             bucket.emplace_back(dt, v);
         }
         // TODO(soonhok): visualization
@@ -898,6 +989,28 @@ double ode_solver::logVolume_Xt(rp_box b) const {
     return ret;
 }
 
+vector<double> ode_solver::extract_X0(rp_box b) const {
+    vector<double> ret;
+    ret.emplace_back(m_mode); // Mode
+    // X_0
+    for (Enode * var : m_0_vars) {
+        ret.emplace_back(rp_binf(rp_box_elem(b, m_enode_to_rp_id[var])));
+        ret.emplace_back(rp_bsup(rp_box_elem(b, m_enode_to_rp_id[var])));
+    }
+    return ret;
+}
+
+vector<double> ode_solver::extract_Xt(rp_box b) const {
+    vector<double> ret;
+    ret.emplace_back(m_mode); // Mode
+    // X_t
+    for (Enode * var : m_t_vars) {
+        ret.emplace_back(rp_binf(rp_box_elem(b, m_enode_to_rp_id[var])));
+        ret.emplace_back(rp_bsup(rp_box_elem(b, m_enode_to_rp_id[var])));
+    }
+    return ret;
+}
+
 vector<double> ode_solver::extract_X0T(rp_box b) const {
     vector<double> ret;
     ret.emplace_back(m_mode); // Mode
@@ -958,6 +1071,9 @@ ostream& operator<<(ostream& out, ode_solver::ODE_result ret) {
         break;
     case ode_solver::ODE_result::EXCEPTION:
         out << "EXCEPTION";
+        break;
+    case ode_solver::ODE_result::INV_VIOLATED:
+        out << "INV_VIOLATED";
         break;
     }
     return out;
