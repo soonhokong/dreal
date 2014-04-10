@@ -37,6 +37,9 @@ using std::setw;
 using std::stable_sort;
 using std::unordered_map;
 using std::unordered_set;
+using Minisat::l_True;
+using Minisat::l_False;
+using Minisat::l_Undef;
 
 icp_solver::icp_solver(SMTConfig & c, Egraph & e, SStore & t, scoped_vec const & stack, scoped_env & env,
                        vector<Enode*> & exp, bool complete_check)

@@ -33,11 +33,11 @@ public:
   THandler ( Egraph &      e
            , SMTConfig &   c
            , SMTSolver &   s
-	   , vec< Lit > &  t
-	   , vec< int > &  l
-	   , vec< char > & a
-           , const Var vt 
-	   , const Var vf )
+           , Minisat::vec< Minisat::Lit > &  t
+           , Minisat::vec< int > &  l
+           , Minisat::vec< char > & a
+           , const Minisat::Var vt
+           , const Minisat::Var vf )
     : core_solver        ( e )
     , config             ( c )
     , solver             ( s )
@@ -50,28 +50,28 @@ public:
     , tatoms             ( 0 )
     , batoms             ( 0 )
     , tatoms_given       ( 0 )
-  { 
+  {
     // Reserve room for true and false
     var_to_enode   .resize( 65536, NULL );
-    enode_id_to_var.resize( 65536, var_Undef );
+    enode_id_to_var.resize( 65536, Minisat::var_Undef );
   }
-  
+
   virtual ~THandler ( ) { }
 
-  void    getConflict          ( vec< Lit > &, int & ); // Returns theory conflict in terms of literals
-#ifdef PRODUCE_PROOF 
+  void    getConflict          ( Minisat::vec< Minisat::Lit > &, int & ); // Returns theory conflict in terms of literals
+#ifdef PRODUCE_PROOF
   Enode * getInterpolants      ( );                     // Fill a vector with interpolants
 #endif
-  Lit     getDeduction         ( );			// Returns a literal that is implied by the current state
-  Lit     getSuggestion        ( );			// Returns a literal that is suggested by the current state
-  void    getReason            ( Lit, vec< Lit > & );   // Returns the explanation for a deduced literal
-                                                 
-  Var     enodeToVar           ( Enode * );             // Converts enode into boolean variable. Create a new variable if needed
-  Lit     enodeToLit           ( Enode * );             // Converts enode into boolean literal. Create a new variable if needed
-  Lit     enodeToLit           ( Enode *, Var & );      // Converts enode into boolean literal. Create a new variable if needed
-  Enode * varToEnode           ( Var );                 // Return the enode corresponding to a variable
-  void    clearVar             ( Var );                 // Clear a Var in translation table (used in incremental solving)
-                               
+  Minisat::Lit     getDeduction         ( );			// Returns a literal that is implied by the current state
+  Minisat::Lit     getSuggestion        ( );			// Returns a literal that is suggested by the current state
+  void    getReason            ( Minisat::Lit, Minisat::vec< Minisat::Lit > & );   // Returns the explanation for a deduced literal
+
+  Minisat::Var     enodeToVar           ( Enode * );             // Converts enode into boolean variable. Create a new variable if needed
+  Minisat::Lit     enodeToLit           ( Enode * );             // Converts enode into boolean literal. Create a new variable if needed
+  Minisat::Lit     enodeToLit           ( Enode *, Minisat::Var & );      // Converts enode into boolean literal. Create a new variable if needed
+  Enode * varToEnode           ( Minisat::Var );                 // Return the enode corresponding to a variable
+  void    clearVar             ( Minisat::Var );                 // Clear a Var in translation table (used in incremental solving)
+
   bool    assertLits           ( );                     // Give to the TSolvers the newly added literals on the trail
   bool    check                ( bool );                // Check trail in the theories
   void    backtrack            ( );                     // Remove literals that are not anymore on the trail
@@ -80,23 +80,23 @@ public:
 
   void    inform               ( );
 
-  lbool   evaluate             ( Enode * e ) { return core_solver.evaluate( e ); }
+  Minisat::lbool   evaluate             ( Enode * e ) { return core_solver.evaluate( e ); }
 
-private:                                 
+private:
 
   // Returns a random float 0 <= x < 1. Seed must never be 0.
-  static inline double drand(double& seed) 
+  static inline double drand(double& seed)
   {
     seed *= 1389796;
     int q = (int)(seed / 2147483647);
     seed -= (double)q * 2147483647;
-    return seed / 2147483647; 
+    return seed / 2147483647;
   }
 
   // Returns a random integer 0 <= x < size. Seed must never be 0.
-  static inline int irand(double& seed, int size) 
+  static inline int irand(double& seed, int size)
   {
-    return (int)(drand(seed) * size); 
+    return (int)(drand(seed) * size);
   }
 
   void verifyCallWithExternalTool        ( bool, size_t );
@@ -108,20 +108,20 @@ private:
 #endif
 
 #ifdef PEDANTIC_DEBUG
-  bool  isOnTrail     ( Lit );
+  bool  isOnTrail     ( Minisat::Lit );
 #endif
 
-  vector< Var >       enode_id_to_var;          // Conversion EnodeID --> Var
+  vector< Minisat::Var >       enode_id_to_var;          // Conversion EnodeID --> Var
   vector< Enode * >   var_to_enode;             // Conversion Var --> EnodeID
-                                               
+
   Egraph &            core_solver;              // Pointer to Egraph that works as core solver
   SMTConfig &         config;                   // Reference to configuration
   SMTSolver &         solver;                   // Reference to SMT Solver
-  vec< Lit > &        trail;                    // Reference to SMT Solver trail
-  vec< int > &        level;                    // Reference to SMT Solver level
-  vec< char > &       assigns;                  // Reference to SMT Solver assigns
-  const Var           var_True;                 // To specify constantly true atoms
-  const Var           var_False;                // To specify constantly false atoms
+  Minisat::vec< Minisat::Lit > &        trail;                    // Reference to SMT Solver trail
+  Minisat::vec< int > &        level;                    // Reference to SMT Solver level
+  Minisat::vec< char > &       assigns;                  // Reference to SMT Solver assigns
+  const Minisat::Var           var_True;                 // To specify constantly true atoms
+  const Minisat::Var           var_False;                // To specify constantly false atoms
   vector< Enode * >   stack;                    // Stacked atoms
   size_t              checked_trail_size;       // Store last size of the trail checked by the solvers
 
@@ -130,7 +130,7 @@ private:
 
   vector< bool >      tatoms_seen;              // Atoms seen
   unsigned            tatoms_given;             // Next atom to give
-  vector< Enode * >   tatoms_list;              // List of tatoms to communicate later 
+  vector< Enode * >   tatoms_list;              // List of tatoms to communicate later
   vector< bool >      tatoms_give;              // We might want not to give some atoms
 };
 

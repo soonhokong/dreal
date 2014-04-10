@@ -22,6 +22,8 @@ along with OpenSMT. If not, see <http://www.gnu.org/licenses/>.
 #include "dsolvers/util/git_sha1.h"
 #include "dsolvers/util/logger.h"
 
+using Minisat::l_Undef;
+
 void
 SMTConfig::initializeConfig( )
 {

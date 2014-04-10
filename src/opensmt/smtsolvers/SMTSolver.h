@@ -21,25 +21,25 @@ along with OpenSMT. If not, see <http://www.gnu.org/licenses/>.
 #define SMTSOLVER_H
 
 #include "THandler.h"
-#include "SolverTypes.h"
+#include "minisat/core/SolverTypes.h"
 #include "Global.h"
 #include "Egraph.h"
 #include "SMTConfig.h"
 
 class THandler; // Forward declaration
 
-// 
-// Interface that a SATSolver should implement 
+//
+// Interface that a SATSolver should implement
 //
 class SMTSolver
 {
 public:
 
-  SMTSolver ( Egraph & e, SMTConfig & c ) 
+  SMTSolver ( Egraph & e, SMTConfig & c )
     : egraph( e )
-    , config( c ) 
+    , config( c )
   { }
-  
+
   virtual ~SMTSolver ( ) { }
   //
   // addClause
@@ -50,9 +50,9 @@ public:
   // corresponding clause in the SAT Solver
   //
   virtual bool   addSMTClause  ( vector< Enode * > &, uint64_t = 0 ) = 0;
-  virtual lbool  smtSolve      ( )                                   = 0;
-  virtual Var    newVar        ( bool = true, bool = true )          = 0;
-  virtual void   setFrozen     ( Var, bool )                         = 0;
+  virtual Minisat::lbool  smtSolve      ( )                                   = 0;
+  virtual Minisat::Var    newVar        ( bool = true, bool = true )          = 0;
+  virtual void   setFrozen     ( Minisat::Var, bool )                         = 0;
 
 protected:
 

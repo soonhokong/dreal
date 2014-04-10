@@ -21,6 +21,10 @@ along with OpenSMT. If not, see <http://www.gnu.org/licenses/>.
 #include "dsolvers/util/string.h"
 
 using std::unordered_set;
+using Minisat::lbool;
+using Minisat::l_True;
+using Minisat::l_False;
+using Minisat::l_Undef;
 
 //
 // Constructor for ENIL

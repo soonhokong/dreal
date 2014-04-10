@@ -361,7 +361,7 @@ public:
   // Public APIs for Egraph Core Solver
 
   void                initializeTheorySolvers ( SimpSMTSolver * );          // Attaches ordinary theory solvers
-  lbool               inform                  ( Enode * );                  // Inform the solver about the existence of a theory atom
+  Minisat::lbool      inform                  ( Enode * );                  // Inform the solver about the existence of a theory atom
   bool                assertLit               ( Enode *, bool = false );    // Assert a theory literal
   void                pushBacktrackPoint      ( );                          // Push a backtrack point
   void                popBacktrackPoint       ( );                          // Backtrack to last saved point
@@ -552,7 +552,7 @@ private:
   bool                        theoryInitialized;                // True if theory solvers are initialized
   bool                        state;                            // the hell is this ?
   set< enodeid_t >            initialized;                      // Keep track of initialized nodes
-  map< enodeid_t, lbool >     informed;                         // Keep track of informed nodes
+  map< enodeid_t, Minisat::lbool > informed;                         // Keep track of informed nodes
   vector< Enode * >           pending;                          // Pending merges
   vector< Enode * >           undo_stack_term;                  // Keeps track of terms involved in operations
   vector< oper_t >            undo_stack_oper;                  // Keeps track of operations

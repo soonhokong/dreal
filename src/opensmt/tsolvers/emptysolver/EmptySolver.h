@@ -26,18 +26,18 @@ class EmptySolver : public OrdinaryTSolver
 {
 public:
 
-  EmptySolver( const int           
-             , const char *        
-	     , SMTConfig &         
-	     , Egraph &            
-	     , SStore &
-	     , vector< Enode * > & 
-	     , vector< Enode * > & 
+  EmptySolver( const int
+             , const char *
+             , SMTConfig &
+             , Egraph &
+             , SStore &
+             , vector< Enode * > &
+             , vector< Enode * > &
              , vector< Enode * > & );
 
   ~EmptySolver ( );
 
-  lbool               inform              ( Enode * );
+  Minisat::lbool      inform              ( Enode * );
   bool                assertLit           ( Enode *, bool = false );
   void                pushBacktrackPoint  ( );
   void                popBacktrackPoint   ( );

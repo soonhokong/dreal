@@ -42,7 +42,7 @@ public:
     , solver       ( *solver_p )
     , cnfizer_p    ( new Tseitin( egraph, solver, config, sstore ) )
     , cnfizer      ( *cnfizer_p )
-    , state        ( l_Undef )
+    , state        ( Minisat::l_Undef )
     , nof_checksat ( 0 )
 //    , counter      ( 0 )
     , init         ( false )
@@ -61,7 +61,7 @@ public:
     , solver       ( *solver_p )
     , cnfizer_p    ( new Tseitin( egraph, solver, config, sstore ) )
     , cnfizer      ( *cnfizer_p )
-    , state        ( l_Undef )
+    , state        ( Minisat::l_Undef )
     , nof_checksat ( 0 )
 //    , counter      ( 0 )
     , init         ( false )
@@ -112,15 +112,15 @@ public:
   void          GetProof             ( );
   void          GetInterpolants      ( );
 
-  void          Assert               ( Enode * );               // Pushes assertion
-  lbool         CheckSAT             ( );                       // Command for (check-sat)
-  void          Exit                 ( );                       // Command for (exit)
+  void           Assert              ( Enode * );               // Pushes assertion
+  Minisat::lbool CheckSAT            ( );                       // Command for (check-sat)
+  void           Exit                ( );                       // Command for (exit)
 
   //
   // Misc
   //
-  void          PrintResult          ( const lbool &
-                                     , const lbool & = l_Undef );
+  void          PrintResult          ( const Minisat::lbool &
+                                     , const Minisat::lbool & = Minisat::l_Undef );
 
   //
   // For script: add a command to the queue
@@ -137,8 +137,8 @@ public:
   //
   // API compatible with PB/CT
   //
-  lbool   CheckSAT   ( vec< Enode * > & );                      // Command for (check-sat)
-  lbool   CheckSAT   ( vec< Enode * > &, unsigned );            // Command for (check-sat)
+  Minisat::lbool CheckSAT   ( Minisat::vec< Enode * > & );                      // Command for (check-sat)
+  Minisat::lbool CheckSAT   ( Minisat::vec< Enode * > &, unsigned );            // Command for (check-sat)
 
   //======================================================================
   //
@@ -195,8 +195,8 @@ public:
       assert(flowname);
       return egraph.mkIntegral(time_0, time_t, vec_0, vec_t, flowname);
   }
-  
-  inline void setMaxPrecision ( const double d ) 
+
+  inline void setMaxPrecision ( const double d )
   {
     if(d > config.nra_precision)
       config.nra_precision = d;
@@ -238,14 +238,14 @@ public:
   //
   // Getty functions
   //
-  inline SMTConfig & getConfig    ( )           { return config; }
-  inline unsigned    getLearnts   ( )           { return solver.nLearnts( ); }
-  inline unsigned    getDecisions ( )           { return solver.decisions; }
-  inline lbool       getStatus    ( )           { return state; }
+  inline SMTConfig &    getConfig    ( )           { return config; }
+  inline unsigned       getLearnts   ( )           { return solver.nLearnts( ); }
+  inline unsigned       getDecisions ( )           { return solver.decisions; }
+  inline Minisat::lbool getStatus    ( )           { return state; }
 #ifndef SMTCOMP
-  inline lbool       getModel     ( Enode * a ) { return solver.getModel( a ); }
+  inline Minisat::lbool getModel     ( Enode * a ) { return solver.getModel( a ); }
 #endif
-  inline Egraph *    getEgraphP   ( )           { return egraph_p; }
+  inline Egraph *       getEgraphP   ( )           { return egraph_p; }
 
   //======================================================================
   //
@@ -315,7 +315,7 @@ private:
 #endif
   void    loadCustomSettings ( );                                // Loads custom settings for SMTCOMP
 
-  lbool              state;                                      // Current state of the solver
+  Minisat::lbool     state;                                      // Current state of the solver
   vector< Command >  command_list;                               // Store commands to execute
   unsigned           nof_checksat;                               // Counter for CheckSAT commands
 //  unsigned           counter;                                    // Counter for creating new terms

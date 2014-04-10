@@ -269,11 +269,11 @@ public:
   // inline Reason * getExpReason           ( ) const { assert( isTerm( ) && cong_data && cong_data->term_data ); return cong_data->term_data->exp_reason; }
   inline int      getExpTimeStamp        ( ) const { assert( isTerm( ) && cong_data && cong_data->term_data ); return cong_data->term_data->exp_time_stamp; }
 
-  inline lbool    getPolarity            ( ) const { assert( isTerm( ) && atom_data ); return atom_data->polarity; }
+  inline Minisat::lbool    getPolarity            ( ) const { assert( isTerm( ) && atom_data ); return atom_data->polarity; }
   inline bool     hasPolarity            ( ) const { assert( isTerm( ) && atom_data ); return atom_data->has_polarity; }
-  inline lbool    getDeduced             ( ) const { assert( isTerm( ) && atom_data ); return atom_data->deduced; }
+  inline Minisat::lbool    getDeduced             ( ) const { assert( isTerm( ) && atom_data ); return atom_data->deduced; }
   inline bool     isDeduced              ( ) const { assert( isTerm( ) && atom_data ); return atom_data->is_deduced; }
-  inline lbool    getDecPolarity         ( )       { assert( isAtom( ) && atom_data ); return atom_data->dec_polarity; }
+  inline Minisat::lbool    getDecPolarity         ( )       { assert( isAtom( ) && atom_data ); return atom_data->dec_polarity; }
   inline int      getWeightInc           ( )       { assert( isAtom( ) && atom_data ); return atom_data->weight_inc; }
   inline int      getDedIndex            ( ) const { assert( isTerm( ) && atom_data ); return atom_data->ded_index; }
   inline int      getDistIndex           ( ) const { assert( isTerm( ) && atom_data ); return atom_data->dist_index; }
@@ -312,12 +312,12 @@ public:
   inline void    setExpClassSize        ( const int s )          { assert( isTerm( ) && cong_data && cong_data->term_data ); cong_data->term_data->exp_class_size = s; }
   inline void    setExpHighestNode      ( Enode * e )            { assert( isTerm( ) && cong_data && cong_data->term_data ); cong_data->term_data->exp_highest_node = e; }
   inline void    setExpTimeStamp        ( const int t )          { assert( isTerm( ) && cong_data && cong_data->term_data ); cong_data->term_data->exp_time_stamp = t; }
-  inline void    setPolarity            ( const lbool p )        { assert( isTerm( ) && atom_data ); assert( !atom_data->has_polarity ); atom_data->polarity = p; atom_data->has_polarity = true; }
+  inline void    setPolarity            ( const Minisat::lbool p )        { assert( isTerm( ) && atom_data ); assert( !atom_data->has_polarity ); atom_data->polarity = p; atom_data->has_polarity = true; }
   inline void    resetPolarity          ( )                      { assert( isTerm( ) && atom_data ); assert( atom_data->has_polarity ); atom_data->has_polarity = false; }
-  inline void    setDeduced             ( const lbool d, int i ) { assert( isTerm( ) && atom_data ); assert( !atom_data->is_deduced ); atom_data->deduced = d; atom_data->ded_index = i; atom_data->is_deduced = true; }
-  inline void    setDeduced             ( const bool s, int i )  { setDeduced( s ? l_False : l_True, i ); }
+  inline void    setDeduced             ( const Minisat::lbool d, int i ) { assert( isTerm( ) && atom_data ); assert( !atom_data->is_deduced ); atom_data->deduced = d; atom_data->ded_index = i; atom_data->is_deduced = true; }
+  inline void    setDeduced             ( const bool s, int i )  { setDeduced( s ? Minisat::l_False : Minisat::l_True, i ); }
   inline void    resetDeduced           ( )                      { assert( isTerm( ) && atom_data ); assert( atom_data->is_deduced ); atom_data->is_deduced = false; }
-  inline void    setDecPolarity         ( const lbool s )        { assert( isAtom( ) && atom_data ); atom_data->dec_polarity = s; }
+  inline void    setDecPolarity         ( const Minisat::lbool s )        { assert( isAtom( ) && atom_data ); atom_data->dec_polarity = s; }
   inline void    setWeightInc           ( const int w )          { assert( isAtom( ) && atom_data ); atom_data->weight_inc = w; }
   inline void    setDistIndex           ( const int d )          { assert( isTerm( ) && atom_data ); atom_data->dist_index = d; }
 
@@ -345,7 +345,7 @@ public:
   bool           addToCongruence        ( ) const;
   unsigned       sizeInMem              ( ) const;
 
-  void           print_infix( ostream & os, lbool polarity, string const & variable_postfix = "") const;
+  void           print_infix( ostream & os, Minisat::lbool polarity, string const & variable_postfix = "") const;
   void           print                  ( ostream & ); // Prints the
 
   string         stripName              ( string ) const;
@@ -476,7 +476,7 @@ inline void Enode::setPrecision ( const double v )
 {
   assert( isTerm( ) );
 
-  if( isNot() ) 
+  if( isNot() )
   {
     //only set precision on the atom (not the literal)
     get1st()->setPrecision(v);

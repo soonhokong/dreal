@@ -36,8 +36,22 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#include "Sort.h"
+#include "minisat/mtl/Sort.h"
 #include "SimpSMTSolver.h"
+
+using Minisat::lbool;
+using Minisat::l_True;
+using Minisat::l_False;
+using Minisat::l_Undef;
+using Minisat::toLbool;
+using Minisat::toInt;
+using Minisat::vec;
+using Minisat::Lit;
+using Minisat::Var;
+using Minisat::lit_Undef;
+using Minisat::lit_Error;
+using Minisat::Clause;
+using Minisat::mkLit;
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -129,9 +143,9 @@ void SimpSMTSolver::initialize( )
   setFrozen( var_False, true );
 
   vec< Lit > clauseTrue, clauseFalse;
-  clauseTrue.push( Lit( var_True ) );
+  clauseTrue.push( mkLit( var_True ) );
   addClause( clauseTrue );
-  clauseFalse.push( Lit( var_False, true ) );
+  clauseFalse.push( mkLit( var_False, true ) );
   addClause( clauseFalse );
 
   theory_handler = new THandler( egraph, config, *this, trail, level, assigns, var_True, var_False );
@@ -601,7 +615,7 @@ bool SimpSMTSolver::addClause(vec<Lit>& ps, uint64_t in)
             touched[var(c[i])] = 1;
             assert(elimtable[var(c[i])].order == 0);
             if (elim_heap.inHeap(var(c[i])))
-                elim_heap.increase_(var(c[i]));
+                elim_heap.increase(var(c[i]));
 
 //=================================================================================================
 // Added code
@@ -982,7 +996,7 @@ bool SimpSMTSolver::eliminateVar(Var v, bool fail)
     // Split the occurrences into positive and negative:
     vec<Clause*>  pos, neg;
     for (int i = 0; i < cls.size(); i++)
-        (find(*cls[i], Lit(v)) ? pos : neg).push(cls[i]);
+        (find(*cls[i], mkLit(v)) ? pos : neg).push(cls[i]);
 
     // Check if number of clauses decreases:
     int cnt = 0;

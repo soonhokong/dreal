@@ -20,7 +20,7 @@ along with OpenSMT. If not, see <http://www.gnu.org/licenses/>.
 #ifndef ENODE_TYPES_H
 #define ENODE_TYPES_H
 
-#include "SolverTypes.h"
+#include "minisat/core/SolverTypes.h"
 #include "Global.h"
 #include "Snode.h"
 //
@@ -243,23 +243,23 @@ struct CongData
 struct AtomData
 {
   AtomData ( )
-    : polarity     ( l_Undef )
-    , deduced      ( l_Undef )
+    : polarity     ( Minisat::l_Undef )
+    , deduced      ( Minisat::l_Undef )
     , ded_index    ( -2 )
     , dist_index   ( -1 )
     , has_polarity ( false )
     , is_deduced   ( false )
-    , dec_polarity ( l_Undef )
+    , dec_polarity ( Minisat::l_Undef )
     , weight_inc   ( 0 )
   { }
 
-  lbool   polarity;         // Associated polarity on the trail
-  lbool   deduced;          // Associated deduced polarity. l_Undef means not deduced
+  Minisat::lbool   polarity;         // Associated polarity on the trail
+  Minisat::lbool   deduced;          // Associated deduced polarity. l_Undef means not deduced
   int     ded_index;        // Index of the solver that deduced this atom
   int     dist_index;       // If this node is a distinction, dist_index is the index in dist_classes that refers to this distinction
   bool    has_polarity;     // True if has polarity
   bool    is_deduced;       // True if deduced
-  lbool   dec_polarity;     // Polarity to be used in decisions
+  Minisat::lbool   dec_polarity;     // Polarity to be used in decisions
   int     weight_inc;       // Initial weight increase
 };
 //

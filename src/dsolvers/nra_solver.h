@@ -35,7 +35,7 @@ public:
     nra_solver(const int, const char *, SMTConfig &, Egraph &, SStore &, std::vector<Enode *> &,
                std::vector<Enode *> &, std::vector<Enode *> &);
     ~nra_solver();
-    lbool inform(Enode * e);
+    Minisat::lbool inform(Enode * e);
     bool  assertLit(Enode * e, bool = false);
     void  pushBacktrackPoint ();
     void  popBacktrackPoint ();

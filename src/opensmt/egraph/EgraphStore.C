@@ -24,6 +24,11 @@ along with OpenSMT. If not, see <http://www.gnu.org/licenses/>.
 #include "SimpSMTSolver.h"
 #include "version.h"
 
+using Minisat::lbool;
+using Minisat::l_True;
+using Minisat::l_False;
+using Minisat::l_Undef;
+
 void Egraph::initializeStore( )
 {
   //
@@ -1055,7 +1060,7 @@ Enode * Egraph::mkNot( Enode * args )
   // not not p --> p
   if ( arg->isNot( ) )
     return arg->get1st( );
-  
+
 
   // not false --> true
   if ( arg->isFalse( ) )

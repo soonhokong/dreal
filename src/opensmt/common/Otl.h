@@ -24,7 +24,7 @@ along with OpenSMT. If not, see <http://www.gnu.org/licenses/>.
 #define OTL_H
 
 #include "Global.h"
-#include "SolverTypes.h"
+#include "minisat/core/SolverTypes.h"
 
 namespace std
 {
@@ -40,10 +40,10 @@ namespace std
   };
   // Hash function for pairs of integer
   template<>
-  struct hash< Clause * >
+  struct hash< Minisat::Clause * >
   {
   public:
-    size_t operator( )( Clause * c ) const
+    size_t operator( )( Minisat::Clause * c ) const
     {
       return (size_t)c;
     }

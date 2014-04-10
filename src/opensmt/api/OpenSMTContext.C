@@ -30,6 +30,12 @@ along with OpenSMT. If not, see <http://www.gnu.org/licenses/>.
 #include <algorithm>
 #include "dsolvers/util/string.h"
 
+using Minisat::lbool;
+using Minisat::l_True;
+using Minisat::l_False;
+using Minisat::l_Undef;
+using Minisat::vec;
+
 namespace opensmt {
 
 bool stop;

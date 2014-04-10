@@ -39,7 +39,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef SIMP_SMT_SOLVER_H
 #define SIMP_SMT_SOLVER_H
 
-#include "Queue.h"
+#include "minisat/mtl/Queue.h"
 #include "CoreSMTSolver.h"
 
 class SimpSMTSolver : public CoreSMTSolver
@@ -51,14 +51,14 @@ class SimpSMTSolver : public CoreSMTSolver
     ~SimpSMTSolver( );
 
     bool         addSMTClause         ( vector< Enode * > &, uint64_t in = 0 );
-    inline lbool smtSolve             ( ) { return solve( false, false ); }
-    inline lbool smtSolve             ( bool do_simp ) { return solve( do_simp, false ); }
+    inline Minisat::lbool smtSolve             ( ) { return solve( false, false ); }
+    inline Minisat::lbool smtSolve             ( bool do_simp ) { return solve( do_simp, false ); }
     Enode *      mergeTAtoms          ( Enode *, bool, Enode *, bool, Enode * );
     void         eliminateTVar        ( Enode * );
     void         initialize           ( );
 
 #if NEW_SIMPLIFICATIONS
-    void         gatherTVars          ( Enode *, bool, Clause * );
+    void         gatherTVars          ( Enode *, bool, Minisat::Clause * );
     void         gaussianElimination  ( );
     void         substituteInClauses  ( );
     bool         dpfm                 ( );
@@ -68,16 +68,16 @@ class SimpSMTSolver : public CoreSMTSolver
 
     void         gatherInterfaceTerms ( Enode * );
 
-    set< Clause * >                      to_remove;
-    vector< Clause * >                   unary_to_remove;
+    set< Minisat::Clause * >                      to_remove;
+    vector< Minisat::Clause * >                   unary_to_remove;
 #if NEW_SIMPLIFICATIONS
     set< Enode * >                       t_var; // Theory variables
 #else
     // TODO: change to vector< list< Clauses * > >
     map< Enode *, set< enodeid_t > >     t_var; // Variables to which is connected to
 #endif
-    map< enodeid_t, vector< Clause * > > t_pos; // Clauses where theory variable appears positively
-    map< enodeid_t, vector< Clause * > > t_neg; // Clauses where theory variable appears negatively
+    map< enodeid_t, vector< Minisat::Clause * > > t_pos; // Clauses where theory variable appears positively
+    map< enodeid_t, vector< Minisat::Clause * > > t_neg; // Clauses where theory variable appears negatively
 
 #if NEW_SIMPLIFICATIONS
     vector< LAExpression * >             var_to_lae;
@@ -85,20 +85,20 @@ class SimpSMTSolver : public CoreSMTSolver
 
     // Problem specification:
     //
-    Var     newVar    (bool polarity = true, bool dvar = true);
-    bool    addClause (vec<Lit>& ps, uint64_t in = 0);
+    Minisat::Var     newVar    (bool polarity = true, bool dvar = true);
+    bool    addClause (Minisat::vec<Minisat::Lit>& ps, uint64_t in = 0);
 
     // Variable mode:
     //
-    void    setFrozen (Var v, bool b); // If a variable is frozen it will not be eliminated.
+    void    setFrozen (Minisat::Var v, bool b); // If a variable is frozen it will not be eliminated.
 
     // Solving:
     //
-    lbool   solve     ( const vec< Enode * > &, bool = true   , bool = false );
-    lbool   solve     ( const vec< Enode * > &, const unsigned, bool = true, bool = false );
-    lbool   solve     ( const vec< Lit > &    , bool = true   , bool = false );
-    lbool   solve     ( const vec< Lit > &    , const unsigned, bool = true, bool = false );
-    lbool   solve     ( bool = true, bool = false );
+    Minisat::lbool   solve     ( const Minisat::vec< Enode * > &, bool = true   , bool = false );
+    Minisat::lbool   solve     ( const Minisat::vec< Enode * > &, const unsigned, bool = true, bool = false );
+    Minisat::lbool   solve     ( const Minisat::vec< Minisat::Lit > &    , bool = true   , bool = false );
+    Minisat::lbool   solve     ( const Minisat::vec< Minisat::Lit > &    , const unsigned, bool = true, bool = false );
+    Minisat::lbool   solve     ( bool = true, bool = false );
     bool    eliminate ( bool = false);             // Perform variable elimination based simplification.
 
     // Generate a (possibly simplified) DIMACS file:
@@ -124,76 +124,76 @@ class SimpSMTSolver : public CoreSMTSolver
     //
     struct ElimData {
         int          order;      // 0 means not eliminated, >0 gives an index in the elimination order
-        vec<Clause*> eliminated;
+        Minisat::vec<Minisat::Clause*> eliminated;
         ElimData() : order(0) {} };
 
     struct ElimOrderLt {
-        const vec<ElimData>& elimtable;
-        ElimOrderLt(const vec<ElimData>& et) : elimtable(et) {}
-        bool operator()(Var x, Var y) { return elimtable[x].order > elimtable[y].order; } };
+        const Minisat::vec<ElimData>& elimtable;
+        ElimOrderLt(const Minisat::vec<ElimData>& et) : elimtable(et) {}
+        bool operator()(Minisat::Var x, Minisat::Var y) { return elimtable[x].order > elimtable[y].order; } };
 
     struct ElimLt {
-        const vec<int>& n_occ;
-        ElimLt(const vec<int>& no) : n_occ(no) {}
-        int  cost      (Var x)        const { return n_occ[toInt(Lit(x))] * n_occ[toInt(~Lit(x))]; }
-        bool operator()(Var x, Var y) const { return cost(x) < cost(y); } };
+        const Minisat::vec<int>& n_occ;
+        ElimLt(const Minisat::vec<int>& no) : n_occ(no) {}
+        int  cost      (Minisat::Var x)        const { return n_occ[Minisat::toInt(Minisat::mkLit(x))] * n_occ[Minisat::toInt(~Minisat::mkLit(x))]; }
+        bool operator()(Minisat::Var x, Minisat::Var y) const { return cost(x) < cost(y); } };
 
 
     // Solver state:
     //
     int                 elimorder;
     bool                use_simplification;
-    vec<ElimData>       elimtable;
-    vec<char>           touched;
-    vec<vec<Clause*> >  occurs;
-    vec<int>            n_occ;
-    Heap<ElimLt>        elim_heap;
-    Queue<Clause*>      subsumption_queue;
-    vec<char>           frozen;
+    Minisat::vec<ElimData>       elimtable;
+    Minisat::vec<char>           touched;
+    Minisat::vec<Minisat::vec<Minisat::Clause*> >  occurs;
+    Minisat::vec<int>            n_occ;
+    Minisat::Heap<int, ElimLt>        elim_heap;
+    Minisat::Queue<Minisat::Clause*>      subsumption_queue;
+    Minisat::vec<char>           frozen;
     int                 bwdsub_assigns;
 
     // Temporaries:
     //
-    Clause*             bwdsub_tmpunit;
+    Minisat::Clause*             bwdsub_tmpunit;
 
     // Main internal methods:
     //
-    bool          asymm                    (Var v, Clause& c);
-    bool          asymmVar                 (Var v);
-    void          updateElimHeap           (Var v);
-    void          cleanOcc                 (Var v);
-    vec<Clause*>& getOccurs                (Var x);
+    bool          asymm                    (Minisat::Var v, Minisat::Clause& c);
+    bool          asymmVar                 (Minisat::Var v);
+    void          updateElimHeap           (Minisat::Var v);
+    void          cleanOcc                 (Minisat::Var v);
+    Minisat::vec<Minisat::Clause*>& getOccurs                (Minisat::Var x);
     void          gatherTouchedClauses     ();
-    bool          merge                    (const Clause& _ps, const Clause& _qs, Var v, vec<Lit>& out_clause);
-    bool          merge                    (const Clause& _ps, const Clause& _qs, Var v);
+    bool          merge                    (const Minisat::Clause& _ps, const Minisat::Clause& _qs, Minisat::Var v, Minisat::vec<Minisat::Lit>& out_clause);
+    bool          merge                    (const Minisat::Clause& _ps, const Minisat::Clause& _qs, Minisat::Var v);
     bool          backwardSubsumptionCheck (bool verbose = false);
-    bool          eliminateVar             (Var v, bool fail = false);
-    void          remember                 (Var v);
+    bool          eliminateVar             (Minisat::Var v, bool fail = false);
+    void          remember                 (Minisat::Var v);
     void          extendModel              ();
     void          verifyModel              ();
 
-    void          removeClause             (Clause& c);
-    bool          strengthenClause         (Clause& c, Lit l);
+    void          removeClause             (Minisat::Clause& c);
+    bool          strengthenClause         (Minisat::Clause& c, Minisat::Lit l);
     void          cleanUpClauses           ();
-    bool          implied                  (const vec<Lit>& c);
-    void          toDimacs                 (FILE* f, Clause& c);
-    bool          isEliminated             (Var v) const;
+    bool          implied                  (const Minisat::vec<Minisat::Lit>& c);
+    void          toDimacs                 (FILE* f, Minisat::Clause& c);
+    bool          isEliminated             (Minisat::Var v) const;
 };
 
 
 //=================================================================================================
 // Implementation of inline methods:
 
-inline void SimpSMTSolver::updateElimHeap(Var v) {
+inline void SimpSMTSolver::updateElimHeap(Minisat::Var v) {
     if (elimtable[v].order == 0)
         elim_heap.update(v); }
 
-inline void SimpSMTSolver::cleanOcc(Var v)
+inline void SimpSMTSolver::cleanOcc(Minisat::Var v)
 {
     assert(use_simplification);
-    Clause **begin = (Clause**)occurs[v];
-    Clause **end = begin + occurs[v].size();
-    Clause **i, **j;
+    Minisat::Clause **begin = (Minisat::Clause**)occurs[v];
+    Minisat::Clause **end = begin + occurs[v].size();
+    Minisat::Clause **i, **j;
     for (i = begin, j = end; i < j; i++)
         if ((*i)->mark() == 1){
             *i = *(--j);
@@ -203,12 +203,12 @@ inline void SimpSMTSolver::cleanOcc(Var v)
     occurs[v].shrink(end - j);
 }
 
-inline vec<Clause*>& SimpSMTSolver::getOccurs(Var x) {
+inline Minisat::vec<Minisat::Clause*>& SimpSMTSolver::getOccurs(Minisat::Var x) {
     cleanOcc(x); return occurs[x]; }
 
-inline bool  SimpSMTSolver::isEliminated (Var v) const { return v < elimtable.size() && elimtable[v].order != 0; }
-inline void  SimpSMTSolver::setFrozen    (Var v, bool b) { if ( !use_simplification ) return; frozen[v] = (char)b; if (b) { updateElimHeap(v); } }
-inline lbool SimpSMTSolver::solve        (bool do_simp, bool turn_off_simp) { vec<Lit> tmp; return solve(tmp, do_simp, turn_off_simp); }
+inline bool  SimpSMTSolver::isEliminated (Minisat::Var v) const { return v < elimtable.size() && elimtable[v].order != 0; }
+inline void  SimpSMTSolver::setFrozen    (Minisat::Var v, bool b) { if ( !use_simplification ) return; frozen[v] = (char)b; if (b) { updateElimHeap(v); } }
+inline Minisat::lbool SimpSMTSolver::solve        (bool do_simp, bool turn_off_simp) { Minisat::vec<Minisat::Lit> tmp; return solve(tmp, do_simp, turn_off_simp); }
 
 //=================================================================================================
 

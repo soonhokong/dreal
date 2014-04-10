@@ -25,6 +25,10 @@ along with dReal. If not, see <http://www.gnu.org/licenses/>.
 #include "dsolvers/util/logger.h"
 
 using std::pair;
+using Minisat::lbool;
+using Minisat::l_True;
+using Minisat::l_False;
+using Minisat::l_Undef;
 
 nra_solver::nra_solver(const int i, const char * n, SMTConfig & c, Egraph & e, SStore & t,
                        vector<Enode *> & x, vector<Enode *> & d, vector<Enode *> & s)

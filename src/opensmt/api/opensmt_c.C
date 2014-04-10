@@ -24,6 +24,12 @@ along with OpenSMT. If not, see <http://www.gnu.org/licenses/>.
 #include "SimpSMTSolver.h"
 #include "version.h"
 
+using Minisat::lbool;
+using Minisat::l_True;
+using Minisat::l_False;
+using Minisat::l_Undef;
+using Minisat::vec;
+
 #ifndef SMTCOMP
 
 #define CAST( FROM, TO ) \

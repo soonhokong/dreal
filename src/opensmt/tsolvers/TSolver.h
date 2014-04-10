@@ -22,7 +22,7 @@ along with OpenSMT. If not, see <http://www.gnu.org/licenses/>.
 
 #include "Enode.h"
 #include "SMTConfig.h"
-#include "SolverTypes.h"
+#include "minisat/core/SolverTypes.h"
 
 class SimpSMTSolver;
 class Egraph;
@@ -61,9 +61,9 @@ struct TSolverStats
       os << "# Conflicts sent...........: " << conflicts_sent << endl;
       if ( conflicts_sent > 0 )
       {
-	os << "# Average conflict size....: " << avg_conf_size / (float)conflicts_sent << endl;
-	os << "# Max conflict size........: " << max_conf_size << endl;
-	os << "# Min conflict size........: " << min_conf_size << endl;
+        os << "# Average conflict size....: " << avg_conf_size / (float)conflicts_sent << endl;
+        os << "# Max conflict size........: " << max_conf_size << endl;
+        os << "# Min conflict size........: " << min_conf_size << endl;
       }
     }
     if ( sat_calls > 0 )
@@ -73,17 +73,17 @@ struct TSolverStats
       os << "# Reasons sent.............: " << reasons_sent << endl;
       if ( reasons_sent > 0 )
       {
-	os << "# Average reason size......: " << avg_reas_size / (float)reasons_sent << endl;
-	os << "# Max reason size..........: " << max_reas_size << endl;
-	os << "# Min reason size..........: " << min_reas_size << endl;
+        os << "# Average reason size......: " << avg_reas_size / (float)reasons_sent << endl;
+        os << "# Max reason size..........: " << max_reas_size << endl;
+        os << "# Min reason size..........: " << min_reas_size << endl;
       }
       os << "# SOD done.................: " << sod_done << endl;
       os << "# SOD sent.................: " << sod_sent << endl;
       if ( sod_sent > 0 )
       {
-	os << "# Average reason size......: " << avg_reas_size / (float)sod_sent << endl;
-	os << "# Max reason size..........: " << max_reas_size << endl;
-	os << "# Min reason size..........: " << min_reas_size << endl;
+        os << "# Average reason size......: " << avg_reas_size / (float)sod_sent << endl;
+        os << "# Max reason size..........: " << max_reas_size << endl;
+        os << "# Min reason size..........: " << min_reas_size << endl;
       }
     }
   }
@@ -124,13 +124,13 @@ public:
 
   virtual ~TSolver ( ) { }
 
-  virtual lbool               inform              ( Enode * )               = 0;  // Inform the solver about the existence of a theory atom
+  virtual Minisat::lbool               inform              ( Enode * )               = 0;  // Inform the solver about the existence of a theory atom
   virtual bool                assertLit           ( Enode *, bool = false ) = 0;  // Assert a theory literal
   virtual void                pushBacktrackPoint  ( )                       = 0;  // Push a backtrack point
   virtual void                popBacktrackPoint   ( )                       = 0;  // Backtrack to last saved point
   virtual bool                check               ( bool )                  = 0;  // Check satisfiability
   inline const string &       getName             ( ) { return name; }            // The name of the solver
-  virtual lbool               evaluate            ( Enode * ) { return l_Undef; } // Evaluate the expression in the current state
+  virtual Minisat::lbool               evaluate            ( Enode * ) { return Minisat::l_Undef; } // Evaluate the expression in the current state
 #ifdef PRODUCE_PROOF
   virtual Enode *             getInterpolants     ( ) { return interpolants; }
 #endif
@@ -150,12 +150,12 @@ public:
 
   OrdinaryTSolver ( const int           i
                   , const char *        n
-		  , SMTConfig &         c
-		  , Egraph &            e
-		  , SStore &            t
-		  , vector< Enode * > & x
-		  , vector< Enode * > & d
-		  , vector< Enode * > & s )
+                  , SMTConfig &         c
+                  , Egraph &            e
+                  , SStore &            t
+                  , vector< Enode * > & x
+                  , vector< Enode * > & d
+                  , vector< Enode * > & s )
     : TSolver     ( i, n, c )
     , egraph      ( e )
     , sstore      ( t )
@@ -185,7 +185,7 @@ public:
 
   CoreTSolver ( const int    i
               , const char * n
-	      , SMTConfig &  c )
+              , SMTConfig &  c )
     : TSolver         ( i, n, c )
     , deductions_next ( 0 )
     , solver          ( NULL )

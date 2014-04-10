@@ -36,6 +36,11 @@ along with OpenSMT. If not, see <http://www.gnu.org/licenses/>.
 
 #define VERBOSE 0
 
+using Minisat::lbool;
+using Minisat::l_True;
+using Minisat::l_False;
+using Minisat::l_Undef;
+
 //
 // Inform the solver about the existence of node e
 //

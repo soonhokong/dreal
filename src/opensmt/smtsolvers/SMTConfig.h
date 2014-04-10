@@ -21,7 +21,7 @@ along with OpenSMT. If not, see <http://www.gnu.org/licenses/>.
 #define SMTCONFIG_H
 
 #include "Global.h"
-#include "SolverTypes.h"
+#include "minisat/core/SolverTypes.h"
 #include <fstream>
 
 using std::ofstream;
@@ -100,7 +100,7 @@ struct SMTConfig
 
   const char * filename;                     // Holds the name of the input filename
   logic_t      logic;                        // SMT-Logic under consideration
-  lbool        status;                       // Status of the benchmark
+  Minisat::lbool        status;                       // Status of the benchmark
   int          incremental;                  // Incremental solving
   int          produce_stats;                // Should print statistics ?
   int          produce_models;               // Should produce models ?

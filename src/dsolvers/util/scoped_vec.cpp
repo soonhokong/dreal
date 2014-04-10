@@ -47,7 +47,8 @@ std::ostream & operator<<(std::ostream & out, scoped_vec const & s) {
     for (auto const & l : s) {
         stringstream ss;
         l->print(ss);
-        out << "literal : " << left << setw(40) << ss.str() << " : " << l->getPolarity().toInt() << endl;
+// TODO(soonhok): fix this
+//        out << "literal : " << left << setw(40) << ss.str() << " : " << l->getPolarity() << endl;
     }
     return out;
 }

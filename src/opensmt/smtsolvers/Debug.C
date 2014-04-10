@@ -19,6 +19,12 @@ along with OpenSMT. If not, see <http://www.gnu.org/licenses/>.
 
 #include "CoreSMTSolver.h"
 
+using Minisat::Clause;
+using Minisat::Var;
+using Minisat::l_True;
+using Minisat::l_Undef;
+using Minisat::l_False;
+
 #ifndef SMTCOMP
 void CoreSMTSolver::dumpCNF( )
 {
