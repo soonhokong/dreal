@@ -161,6 +161,21 @@ ExternalProject_Add(GLOG
 set(EXTRA_LIBS ${EXTRA_LIBS} "-lglog")
 
 ################################################################
+# External: json11 (Dropbox json11)
+################################################################
+ExternalProject_Add(JSON11
+  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/external/json11
+  GIT_REPOSITORY https://github.com/soonhokong/json11.git
+  GIT_TAG origin/master
+  UPDATE_COMMAND git pull origin master
+  CONFIGURE_COMMAND cmake -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_CURRENT_BINARY_DIR} ./
+  BUILD_COMMAND make -j
+  BUILD_IN_SOURCE 1
+  INSTALL_COMMAND make install
+)
+set(EXTRA_LIBS ${EXTRA_LIBS} "-ljson11")
+
+################################################################
 # External: set up include dir and libpath
 ################################################################
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
