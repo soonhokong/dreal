@@ -95,6 +95,8 @@ public:
   // Number of boxes in the set
   int size();
 
+  void setBsize(int bsize) { _bsize = bsize; }
+
   // Access to the i-th box
   rp_box get(int i);
 

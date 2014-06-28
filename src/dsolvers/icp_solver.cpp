@@ -52,7 +52,7 @@ icp_solver::icp_solver(SMTConfig & c, Egraph & e, SStore & t, scoped_vec const &
     rp_init_library();
     m_problem = create_rp_problem();
     if ( !m_config.nra_use_delta_heuristic ){
-        rp_new(m_vselect, rp_selector_existence, (&m_problem)); // rp_selector_roundrobin
+        rp_new(m_vselect, rp_selector_roundrobin, (&m_problem)); // rp_selector_roundrobin
     } else {
         rp_new(m_vselect, rp_selector_delta, (&m_problem)); // rp_selector_delta
     }
@@ -70,18 +70,17 @@ icp_solver::icp_solver(SMTConfig & c, Egraph & e, SStore & t, scoped_vec const &
         // Insertion of the initial box in the search structure
         m_boxes.insert(rp_problem_box(m_problem));
         // Management of improvement factor
+        double improve = 0.875; /* 12.5% */
         if ((c.nra_icp_improve >= 0.0) && (c.nra_icp_improve <= 100.0)) {
-            m_improve = 1.0 - c.nra_icp_improve / 100.0;
-        } else {
-            m_improve = 0.875; /* 12.5% */
+            improve = 1.0 - c.nra_icp_improve / 100.0;
         }
-        m_propag.set_improve(m_improve);
+        m_propag.set_improve(improve);
         // Creation of the operators and insertion in the propagator
-        rp_hybrid_factory hfact(m_improve);
+        rp_hybrid_factory hfact(improve);
         hfact.apply(&m_problem, m_propag);
         rp_domain_factory dfact;
         dfact.apply(&m_problem, m_propag);
-        rp_newton_factory nfact(m_improve);
+        rp_newton_factory nfact(improve);
         nfact.apply(&m_problem, m_propag);
         // Used for round-robin strategy: last variable split
         rp_box_set_split(m_boxes.get(), -1);// sean: why is the last variable -1? oh, must be length - this number

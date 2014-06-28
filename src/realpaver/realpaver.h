@@ -16,13 +16,13 @@
 #include "realpaverbasic.h"
 #include "rp_operator.h"
 #include "rp_operator_factory.h"
-#include "rp_propagator.h"
 #include "rp_box_set.h"
 #include "rp_split_selector.h"
 #include "rp_split.h"
 #include "rp_verification.h"
 #include "rp_output.h"
 #include "rp_solver.h"
+#include "rp_propagator.h"
 
 /* Use of the library between these two operations */
 

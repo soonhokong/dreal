@@ -83,7 +83,6 @@ private:
     rp_selector *                    m_vselect; /* selection of variable to be split */
     rp_splitter *                    m_dsplit; /* split function of variable domain */
     int                              m_nsplit; /* number of split steps */
-    double                           m_improve; /* improvement factor of iterative methods */
     vector<rp_constraint *>          m_rp_constraints;
     scoped_vec const &               m_stack;
     scoped_env &                     m_env;
