@@ -103,9 +103,11 @@ let rec check (pt : t) (fl : formula list) =
       (incr num_of_trivial_pruning;
        check pt' fl)
     else
-      let remainders = Env.minus env1 env2 in
+      let remainders = Env.partition env1 env2 in
+      let remainders' = List.filter (fun e -> not (Env.equals e env2)) remainders in
       begin
         incr num_of_non_trivial_pruning;
-        List.iter (fun env_ -> check (Axiom env_) fl) remainders;
+        List.iter (fun env_ -> check (Axiom env_) fl) remainders';
         check pt' fl
       end
+

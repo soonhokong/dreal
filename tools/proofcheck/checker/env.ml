@@ -60,37 +60,20 @@ let is_empty (e : t) : bool =
        -> (Float.compare l h) = 0)
        (to_list e))
 
-(* minus e1 e2 == (e1 - e2) *)
-let minus (e1 : t) (e2 : t) : (t list) =
-  let extract_diff_dim l1 l2 =
-    let diff_list =
-      List.filter
-        (fun ((_, i1), (_, i2))
-        -> not (Intv.equals i1 i2))
-        (List.combine l1 l2) in
-    match diff_list with
-    | hd::[] -> hd
-    | _ -> raise (CException ("Two envs differ on multiple dimensions: " ^ string_of_int (List.length diff_list)))
-  in
+(** partition e1 e2 : Partition Box e1 into subboxes which includes e2 *)
+let partition (e1 : t) (e2 : t) : (t list) =
   let l1 = to_list e1 in
   let l2 = to_list e2 in
-  let ((key, _), (_, _)) = extract_diff_dim l1 l2 in
-  let (l1', l2') =
-    List.split
-      (List.map
-         (fun (((key1, {Intv.low = l1; Intv.high = h1}) as elem1),
-             ((key2, {Intv.low = l2; Intv.high = h2}) as elem2))
-         ->
-           if key != key1 then
-             (elem1, elem2)
-           else
-             ((key1, {Intv.low = l1; Intv.high = l2}),
-              (key2, {Intv.low = h1; Intv.high = h2}))
-         )
-         (List.combine l1 l2)
-      )
+  let l =  List.map
+             (fun ((key1, i1), (key2, i2)) ->
+              assert(key1 = key2);
+              let partitions = Intv.partition i1 i2 in
+              List.map (fun i -> (key1, i)) partitions)
+             (List.combine l1 l2)
   in
-  List.filter (fun e -> not (is_empty e)) [from_list l1';from_list l2']
+  List.map
+    (fun l -> from_list l)
+    (List.n_cartesian_product l)
 
 let left_bound (e : t) : (string, float) Map.t =
   let keys = keys e in
@@ -101,7 +84,6 @@ let left_bound (e : t) : (string, float) Map.t =
     )
     keys in
   Map.of_enum items
-
 
 let right_bound (e : t) : float list =
   let keys = List.of_enum (keys e) in
